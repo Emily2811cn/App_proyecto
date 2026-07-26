@@ -1,2 +1,8 @@
-// Cambia esta URL por la de tu API en el VPS (por ejemplo: "https://tudominio.com/api")
-const API_URL = "http://localhost:5000/api";
+// ── Para PROBAR EN TU PC (local) ──
+// Deja esta línea activa mientras desarrollas:
+const API_URL = "/api";
+
+// ── Para el SERVIDOR (VPS con nginx) ──
+// Cuando subas los archivos al VPS, comenta la línea de arriba
+// y descomenta esta:
+// const API_URL = "/api";

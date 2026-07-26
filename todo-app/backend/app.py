@@ -33,9 +33,16 @@ def list_tasks():
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Muestra: todas las pendientes (de cualquier día) +
+            # las completadas SOLO si fueron completadas hoy.
+            # Las completadas de días anteriores quedan fuera del listado
+            # (pero no se borran, siguen en la base de datos como historial).
             cur.execute(
-                "SELECT id, title, description, completed, created_at "
-                "FROM tasks ORDER BY created_at DESC"
+                "SELECT id, title, description, completed, completed_at, created_at "
+                "FROM tasks "
+                "WHERE completed = FALSE "
+                "   OR completed_at::date = CURRENT_DATE "
+                "ORDER BY completed ASC, created_at DESC"
             )
             tasks = cur.fetchall()
         return jsonify(tasks)
@@ -57,7 +64,7 @@ def create_task():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 "INSERT INTO tasks (title, description) VALUES (%s, %s) "
-                "RETURNING id, title, description, completed, created_at",
+                "RETURNING id, title, description, completed, completed_at, created_at",
                 (title, description),
             )
             new_task = cur.fetchone()
@@ -77,25 +84,95 @@ def update_task(task_id):
             if cur.fetchone() is None:
                 return jsonify({"error": "Tarea no encontrada"}), 404
 
-            cur.execute(
-                """
-                UPDATE tasks
-                SET title = COALESCE(%s, title),
-                    description = COALESCE(%s, description),
-                    completed = COALESCE(%s, completed)
-                WHERE id = %s
-                RETURNING id, title, description, completed, created_at
-                """,
-                (
-                    data.get("title"),
-                    data.get("description"),
-                    data.get("completed"),
-                    task_id,
-                ),
-            )
+            completed = data.get("completed")
+            if completed is True:
+                # Se marca como hecha ahora mismo
+                cur.execute(
+                    """
+                    UPDATE tasks
+                    SET title = COALESCE(%s, title),
+                        description = COALESCE(%s, description),
+                        completed = TRUE,
+                        completed_at = NOW()
+                    WHERE id = %s
+                    RETURNING id, title, description, completed, completed_at, created_at
+                    """,
+                    (data.get("title"), data.get("description"), task_id),
+                )
+            elif completed is False:
+                # Se desmarca: vuelve a estar pendiente
+                cur.execute(
+                    """
+                    UPDATE tasks
+                    SET title = COALESCE(%s, title),
+                        description = COALESCE(%s, description),
+                        completed = FALSE,
+                        completed_at = NULL
+                    WHERE id = %s
+                    RETURNING id, title, description, completed, completed_at, created_at
+                    """,
+                    (data.get("title"), data.get("description"), task_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE tasks
+                    SET title = COALESCE(%s, title),
+                        description = COALESCE(%s, description)
+                    WHERE id = %s
+                    RETURNING id, title, description, completed, completed_at, created_at
+                    """,
+                    (data.get("title"), data.get("description"), task_id),
+                )
             updated_task = cur.fetchone()
         conn.commit()
         return jsonify(updated_task)
+    finally:
+        conn.close()
+
+
+@app.route("/api/tasks/<int:task_id>/updates", methods=["GET"])
+def list_task_updates(task_id):
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id FROM tasks WHERE id = %s", (task_id,))
+            if cur.fetchone() is None:
+                return jsonify({"error": "Tarea no encontrada"}), 404
+
+            cur.execute(
+                "SELECT id, task_id, note, created_at FROM task_updates "
+                "WHERE task_id = %s ORDER BY created_at ASC",
+                (task_id,),
+            )
+            updates = cur.fetchall()
+        return jsonify(updates)
+    finally:
+        conn.close()
+
+
+@app.route("/api/tasks/<int:task_id>/updates", methods=["POST"])
+def create_task_update(task_id):
+    data = request.get_json(force=True)
+    note = (data.get("note") or "").strip()
+    if not note:
+        return jsonify({"error": "El avance no puede estar vacío"}), 400
+
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id FROM tasks WHERE id = %s", (task_id,))
+            if cur.fetchone() is None:
+                return jsonify({"error": "Tarea no encontrada"}), 404
+
+            cur.execute(
+                "INSERT INTO task_updates (task_id, note) VALUES (%s, %s) "
+                "RETURNING id, task_id, note, created_at",
+                (task_id, note),
+            )
+            new_update = cur.fetchone()
+        conn.commit()
+        return jsonify(new_update), 201
     finally:
         conn.close()
 

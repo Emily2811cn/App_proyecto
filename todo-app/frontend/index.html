@@ -38,6 +38,23 @@
     <p id="empty-message" class="empty-message" hidden>✨ No hay tareas que coincidan. ¡Prueba con otra palabra!</p>
   </main>
 
+  <div id="task-modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <button id="modal-close" class="modal-close" aria-label="Cerrar">✕</button>
+      <h2 id="modal-title"></h2>
+      <p id="modal-description" class="modal-description"></p>
+
+      <h3 class="modal-subheading">Línea de tiempo</h3>
+      <ul id="modal-timeline" class="timeline"></ul>
+      <p id="modal-timeline-empty" class="empty-message" hidden>Aún no hay avances registrados.</p>
+
+      <form id="update-form" class="update-form">
+        <input type="text" id="update-input" placeholder="¿Qué hiciste o falta por hacer?" required>
+        <button type="submit">Agregar avance</button>
+      </form>
+    </div>
+  </div>
+
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

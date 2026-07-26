@@ -5,7 +5,17 @@ const filterInput = document.getElementById("filter-input");
 const taskList = document.getElementById("task-list");
 const emptyMessage = document.getElementById("empty-message");
 
+const modal = document.getElementById("task-modal");
+const modalTitle = document.getElementById("modal-title");
+const modalDescription = document.getElementById("modal-description");
+const modalTimeline = document.getElementById("modal-timeline");
+const modalTimelineEmpty = document.getElementById("modal-timeline-empty");
+const modalClose = document.getElementById("modal-close");
+const updateForm = document.getElementById("update-form");
+const updateInput = document.getElementById("update-input");
+
 let tasks = [];
+let currentTaskId = null;
 
 async function fetchTasks() {
   const response = await fetch(`${API_URL}/tasks`);
@@ -14,12 +24,21 @@ async function fetchTasks() {
 }
 
 async function createTask(title, description) {
-  await fetch(`${API_URL}/tasks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, description }),
-  });
-  await fetchTasks();
+  try {
+    const response = await fetch(`${API_URL}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      alert("Error del servidor: " + (err.error || response.status));
+      return;
+    }
+    await fetchTasks();
+  } catch (error) {
+    alert("No se pudo conectar con el servidor (" + API_URL + "). Detalle: " + error.message);
+  }
 }
 
 async function toggleTask(id, completed) {
@@ -62,6 +81,7 @@ function renderTasks(filterText = "") {
     const descEl = document.createElement("p");
     descEl.textContent = task.description || "";
     textWrapper.append(titleEl, descEl);
+    textWrapper.addEventListener("click", () => openTaskModal(task));
 
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Eliminar";
@@ -72,6 +92,69 @@ function renderTasks(filterText = "") {
     taskList.appendChild(li);
   });
 }
+
+async function openTaskModal(task) {
+  currentTaskId = task.id;
+  modalTitle.textContent = task.title;
+  modalDescription.textContent = task.description || "";
+  modal.hidden = false;
+  await loadTimeline(task.id);
+}
+
+function closeTaskModal() {
+  modal.hidden = true;
+  currentTaskId = null;
+  updateInput.value = "";
+}
+
+async function loadTimeline(taskId) {
+  modalTimeline.innerHTML = "";
+  try {
+    const response = await fetch(`${API_URL}/tasks/${taskId}/updates`);
+    const items = await response.json();
+    modalTimelineEmpty.hidden = items.length > 0;
+    items.forEach((item) => {
+      const li = document.createElement("li");
+      const note = document.createElement("span");
+      note.className = "timeline-note";
+      note.textContent = item.note;
+      const date = document.createElement("span");
+      date.className = "timeline-date";
+      date.textContent = new Date(item.created_at).toLocaleString();
+      li.append(note, date);
+      modalTimeline.appendChild(li);
+    });
+  } catch (error) {
+    alert("No se pudo cargar la línea de tiempo. Detalle: " + error.message);
+  }
+}
+
+updateForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const note = updateInput.value.trim();
+  if (!note || currentTaskId === null) return;
+  try {
+    const response = await fetch(`${API_URL}/tasks/${currentTaskId}/updates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      alert("Error del servidor: " + (err.error || response.status));
+      return;
+    }
+    updateInput.value = "";
+    await loadTimeline(currentTaskId);
+  } catch (error) {
+    alert("No se pudo guardar el avance. Detalle: " + error.message);
+  }
+});
+
+modalClose.addEventListener("click", closeTaskModal);
+modal.addEventListener("click", (event) => {
+  if (event.target === modal) closeTaskModal();
+});
 
 taskForm.addEventListener("submit", async (event) => {
   event.preventDefault();

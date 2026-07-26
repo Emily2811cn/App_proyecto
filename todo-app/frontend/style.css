@@ -210,7 +210,7 @@ h1 {
   appearance: none;
   width: 20px;
   height: 20px;
-  border-radius: 7px;
+  border-radius: 50%;
   border: 2px solid var(--blush-deep);
   cursor: pointer;
   flex-shrink: 0;
@@ -286,4 +286,125 @@ h1 {
   color: var(--plum-soft);
   margin-top: 24px;
   font-size: 0.95rem;
+}
+
+.task-text {
+  cursor: pointer;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 46, 69, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: var(--shadow);
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--plum-soft);
+  cursor: pointer;
+}
+
+#modal-title {
+  font-family: "Playfair Display", serif;
+  font-style: italic;
+  color: var(--plum);
+  margin: 0 0 6px;
+  padding-right: 24px;
+}
+
+.modal-description {
+  color: var(--plum-soft);
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+}
+
+.modal-subheading {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--lavender-deep);
+  margin: 0 0 12px;
+}
+
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timeline li {
+  background: #FBF9FD;
+  border: 1px solid #EAE0F2;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.timeline .timeline-note {
+  color: var(--plum);
+  font-size: 0.9rem;
+  display: block;
+}
+
+.timeline .timeline-date {
+  color: var(--plum-soft);
+  font-size: 0.75rem;
+  display: block;
+  margin-top: 2px;
+}
+
+.update-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.update-form input {
+  flex: 1;
+  min-width: 140px;
+  padding: 11px 14px;
+  border: 1.5px solid #F2DCE3;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.update-form button {
+  padding: 11px 16px;
+  background: linear-gradient(135deg, var(--blush-deep), var(--lavender-deep));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
 }
