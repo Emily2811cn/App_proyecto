@@ -21,7 +21,13 @@ DB_CONFIG = {
 
 def get_connection():
     return psycopg2.connect(**DB_CONFIG)
-
+    
+def log_activity(cur, task_id, task_title, action, details=None):
+    cur.execute(
+        "INSERT INTO activity_log (task_id, task_title, action, details) "
+        "VALUES (%s, %s, %s, %s)",
+        (task_id, task_title, action, details),
+    )
 
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -68,6 +74,8 @@ def create_task():
                 (title, description),
             )
             new_task = cur.fetchone()
+
+        log_activity(cur, new_task["id"], new_task["title"], "creada")
         conn.commit()
         return jsonify(new_task), 201
     finally:
@@ -125,6 +133,8 @@ def update_task(task_id):
                     (data.get("title"), data.get("description"), task_id),
                 )
             updated_task = cur.fetchone()
+        accion = "completada" if data.get("completed") else "actualizada"
+        log_activity(cur, updated_task["id"], updated_task["title"], accion)
         conn.commit()
         return jsonify(updated_task)
     finally:
@@ -181,16 +191,32 @@ def create_task_update(task_id):
 def delete_task(task_id):
     conn = get_connection()
     try:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT title FROM tasks WHERE id = %s", (task_id,))
+            task = cur.fetchone()
+            if task is None:
+                return jsonify({"error": "Tarea no encontrada"}), 404
+
             cur.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
-            deleted = cur.rowcount
+            log_activity(cur, task_id, task["title"], "eliminada")
         conn.commit()
-        if deleted == 0:
-            return jsonify({"error": "Tarea no encontrada"}), 404
         return "", 204
     finally:
         conn.close()
 
+@app.route("/api/activity", methods=["GET"])
+def list_activity():
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, task_id, task_title, action, details, created_at "
+                "FROM activity_log ORDER BY created_at DESC LIMIT 100"
+            )
+            activity = cur.fetchall()
+        return jsonify(activity)
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
