@@ -161,28 +161,27 @@ def list_task_updates(task_id):
         conn.close()
 
 
-@app.route("/api/tasks/<int:task_id>/updates", methods=["POST"])
-def create_task_update(task_id):
+@app.route("/api/tasks", methods=["POST"])
+def create_task():
     data = request.get_json(force=True)
-    note = (data.get("note") or "").strip()
-    if not note:
-        return jsonify({"error": "El avance no puede estar vacío"}), 400
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()
+
+    if not title:
+        return jsonify({"error": "El título es obligatorio"}), 400
 
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT id FROM tasks WHERE id = %s", (task_id,))
-            if cur.fetchone() is None:
-                return jsonify({"error": "Tarea no encontrada"}), 404
-
             cur.execute(
-                "INSERT INTO task_updates (task_id, note) VALUES (%s, %s) "
-                "RETURNING id, task_id, note, created_at",
-                (task_id, note),
+                "INSERT INTO tasks (title, description) VALUES (%s, %s) "
+                "RETURNING id, title, description, completed, created_at",
+                (title, description),
             )
-            new_update = cur.fetchone()
+            new_task = cur.fetchone()
+            log_activity(cur, new_task["id"], new_task["title"], "creada")
         conn.commit()
-        return jsonify(new_update), 201
+        return jsonify(new_task), 201
     finally:
         conn.close()
 
