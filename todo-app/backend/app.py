@@ -21,13 +21,15 @@ DB_CONFIG = {
 
 def get_connection():
     return psycopg2.connect(**DB_CONFIG)
-    
+
+
 def log_activity(cur, task_id, task_title, action, details=None):
     cur.execute(
         "INSERT INTO activity_log (task_id, task_title, action, details) "
         "VALUES (%s, %s, %s, %s)",
         (task_id, task_title, action, details),
     )
+
 
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -132,8 +134,8 @@ def update_task(task_id):
                     (data.get("title"), data.get("description"), task_id),
                 )
             updated_task = cur.fetchone()
-        accion = "completada" if data.get("completed") else "actualizada"
-        log_activity(cur, updated_task["id"], updated_task["title"], accion)
+            accion = "completada" if data.get("completed") else "actualizada"
+            log_activity(cur, updated_task["id"], updated_task["title"], accion)
         conn.commit()
         return jsonify(updated_task)
     finally:
@@ -160,8 +162,6 @@ def list_task_updates(task_id):
         conn.close()
 
 
-
-
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
     conn = get_connection()
@@ -179,6 +179,7 @@ def delete_task(task_id):
     finally:
         conn.close()
 
+
 @app.route("/api/activity", methods=["GET"])
 def list_activity():
     conn = get_connection()
@@ -192,6 +193,7 @@ def list_activity():
         return jsonify(activity)
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
