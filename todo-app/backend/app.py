@@ -70,12 +70,11 @@ def create_task():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 "INSERT INTO tasks (title, description) VALUES (%s, %s) "
-                "RETURNING id, title, description, completed, completed_at, created_at",
+                "RETURNING id, title, description, completed, created_at",
                 (title, description),
             )
             new_task = cur.fetchone()
-
-        log_activity(cur, new_task["id"], new_task["title"], "creada")
+            log_activity(cur, new_task["id"], new_task["title"], "creada")
         conn.commit()
         return jsonify(new_task), 201
     finally:
@@ -161,29 +160,6 @@ def list_task_updates(task_id):
         conn.close()
 
 
-@app.route("/api/tasks", methods=["POST"])
-def create_task():
-    data = request.get_json(force=True)
-    title = (data.get("title") or "").strip()
-    description = (data.get("description") or "").strip()
-
-    if not title:
-        return jsonify({"error": "El título es obligatorio"}), 400
-
-    conn = get_connection()
-    try:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                "INSERT INTO tasks (title, description) VALUES (%s, %s) "
-                "RETURNING id, title, description, completed, created_at",
-                (title, description),
-            )
-            new_task = cur.fetchone()
-            log_activity(cur, new_task["id"], new_task["title"], "creada")
-        conn.commit()
-        return jsonify(new_task), 201
-    finally:
-        conn.close()
 
 
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
