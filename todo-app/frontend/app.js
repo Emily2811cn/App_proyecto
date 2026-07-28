@@ -159,6 +159,7 @@ modal.addEventListener("click", (event) => {
 taskForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const title = titleInput.value.trim();
+  if (!title) return;
   await createTask(title, descriptionInput.value.trim());
   titleInput.value = "";
   descriptionInput.value = "";
