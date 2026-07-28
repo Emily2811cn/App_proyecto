@@ -66,3 +66,6 @@ python -m http.server 8080
 ## Próximos pasos (fuera de este entregable)
 - Desplegar en el VPS: Nginx sirviendo `frontend/`, backend corriendo con gunicorn + systemd, PostgreSQL local.
 - Pipeline de GitHub Actions para el despliegue automático por SSH/rsync.
+
+
+#
