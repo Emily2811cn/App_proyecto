@@ -41,10 +41,6 @@ def list_tasks():
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            # Muestra: todas las pendientes (de cualquier día) +
-            # las completadas SOLO si fueron completadas hoy.
-            # Las completadas de días anteriores quedan fuera del listado
-            # (pero no se borran, siguen en la base de datos como historial).
             cur.execute(
                 "SELECT id, title, description, completed, completed_at, created_at "
                 "FROM tasks "
@@ -95,7 +91,6 @@ def update_task(task_id):
 
             completed = data.get("completed")
             if completed is True:
-                # Se marca como hecha ahora mismo
                 cur.execute(
                     """
                     UPDATE tasks
@@ -109,7 +104,6 @@ def update_task(task_id):
                     (data.get("title"), data.get("description"), task_id),
                 )
             elif completed is False:
-                # Se desmarca: vuelve a estar pendiente
                 cur.execute(
                     """
                     UPDATE tasks
@@ -158,6 +152,33 @@ def list_task_updates(task_id):
             )
             updates = cur.fetchall()
         return jsonify(updates)
+    finally:
+        conn.close()
+
+
+@app.route("/api/tasks/<int:task_id>/updates", methods=["POST"])
+def create_task_update(task_id):
+    data = request.get_json(force=True)
+    note = (data.get("note") or "").strip()
+
+    if not note:
+        return jsonify({"error": "El avance no puede estar vacío"}), 400
+
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id FROM tasks WHERE id = %s", (task_id,))
+            if cur.fetchone() is None:
+                return jsonify({"error": "Tarea no encontrada"}), 404
+
+            cur.execute(
+                "INSERT INTO task_updates (task_id, note) VALUES (%s, %s) "
+                "RETURNING id, task_id, note, created_at",
+                (task_id, note),
+            )
+            new_update = cur.fetchone()
+        conn.commit()
+        return jsonify(new_update), 201
     finally:
         conn.close()
 
