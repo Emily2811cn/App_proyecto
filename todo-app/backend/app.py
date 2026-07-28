@@ -61,7 +61,7 @@ def create_task():
     description = (data.get("description") or "").strip()
 
     if not title:
-        return jsonify({"error": "El título es obligatorio"}), 400
+        return jsonify({"error": "Por favor, inserte un título"}), 400
 
     conn = get_connection()
     try:
